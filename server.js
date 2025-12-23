@@ -2,34 +2,44 @@ import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import morgan from 'morgan';
-import process from 'process';
-import connectDB from './config/db.js'; // 1. Import connection
+// No need to import 'process' explicitly in Node.js, it's global
+import connectDB from './config/db.js'; 
 import userRoutes from './routes/userRoutes.js';
 import { notFound, errorHandler } from './middleware/errorMiddleware.js';
-import { all } from './node_modules/axios/index.d';
+
+// ❌ REMOVED: import { all } from './node_modules/axios/index.d'; 
+// (You should never import from node_modules using relative paths or .d files)
 
 dotenv.config();
 
-// 2. Connect to Database
 connectDB();
 
 const app = express();
 
-const allowedOrigins = [process.env.FRONTEND_URI , 'http://localhost:8080'];
+// --- FIXED CORS LOGIC ---
+// If FRONTEND_URI is a single string, we put it in an array.
+// If you have multiple URIs in your .env like "http://site1.com,http://site2.com", 
+// then use process.env.FRONTEND_URI.split(',')
+const allowedOrigins = [
+  process.env.FRONTEND_URI, 
+  'http://localhost:8080', 
+  'http://localhost:5173' // Common Vite port
+];
 
-// ... existing middleware ...
 app.use(express.json());
-app.use(cors(
-    {
-        origin: allowedOrigins.split(','),
-        methods: ['GET', 'POST', 'PUT', 'DELETE'],
-        allowedHeaders: ['Content-Type', 'Authorization'],
-    }
-))
+
+app.use(cors({
+  origin: allowedOrigins, // Passed the array directly
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+
 app.use(morgan('dev'));
 
+// Routes
 app.use('/api/users', userRoutes);
 
+// Error Handling
 app.use(notFound);
 app.use(errorHandler);
 
